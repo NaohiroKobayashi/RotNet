@@ -4,11 +4,27 @@ import math
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-
+import os
 from keras.preprocessing.image import Iterator
 from keras.utils.np_utils import to_categorical
 import keras.backend as K
 
+def imread(path):
+    tmp_dir = os.getcwd()
+    # 1. 対象ファイルがあるディレクトリに移動
+    if len(path.split("/")) > 1:
+        file_dir = "/".join(path.split("/")[:-1])
+        os.chdir(file_dir)
+    # 2. 対象ファイルの名前を変更
+    tmp_name = "tmp_name"
+    os.rename(path.split("/")[-1], tmp_name)
+    # 3. 対象ファイルを読み取る
+    img = cv2.imread(tmp_name)
+    # 4. 対象ファイルの名前を戻す
+    os.rename(tmp_name, path.split("/")[-1])
+    # カレントディレクトリをもとに戻す
+    os.chdir(tmp_dir)
+    return img
 
 def angle_difference(x, y):
     """
@@ -275,7 +291,7 @@ class RotNetDataGenerator(Iterator):
                 image = self.images[j]
             else:
                 is_color = int(self.color_mode == 'rgb')
-                image = cv2.imread(self.filenames[j], is_color)
+                image = imread(self.filenames[j], is_color)
                 if is_color:
                     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -344,7 +360,7 @@ def display_examples_justangle(model, input, num_images=5, size=None, crop_cente
         N = len(filenames)
         # indexes = np.random.choice(N, num_images)
         for i in range(N):
-            image = cv2.imread(filenames[i])
+            image = imread(filenames[i])
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             images.append(image)
         images = np.asarray(images)
@@ -404,7 +420,7 @@ def display_examples(model, input, num_images=5, size=None, crop_center=False,
         N = len(filenames)
         indexes = np.random.choice(N, num_images)
         for i in indexes:
-            image = cv2.imread(filenames[i])
+            image = imread(filenames[i])
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             images.append(image)
         images = np.asarray(images)

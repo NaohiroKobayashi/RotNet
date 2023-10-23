@@ -54,9 +54,11 @@ def filedialog_clicked(textbox):
     fTyp = [("", "*")]
     iFile = os.path.abspath(os.path.dirname(__file__))
     iFilePaths = filedialog.askopenfilenames(filetype = [("Image file", " .png .jpg "), ("PNG", ".png"), ("JPEG", ".jpg") ], initialdir = iFile)
+    droparea1.configure(state='normal')
     for file in iFilePaths:
         textbox.insert('end', file)
         textbox.insert('end', '\n')
+    droparea1.configure(state='disabled')
 
 
 # フォルダ指定
@@ -67,6 +69,7 @@ def dirdialog_clicked(var):
 
 #dnd
 def droped(event):
+    global count_drop
     files = event.data  
     # 文字列をrawに変換
     filename_new = repr(files)[1:-1]
@@ -74,10 +77,16 @@ def droped(event):
     files_new = filename_new.replace('\\\\', '/').replace('{', '').replace('}', '')
     files_str = str(files_new)
     files_str = files_str.replace(' ', '\n')
+    # 起動して最初のドロップなら、初期文字を消して挿入
+    droparea1.configure(state='normal')
+    if(count_drop == 0):
+        droparea1.delete('1.0', END)    
     droparea1.insert('end', files_str)
+    droparea1.configure(state='disabled')
+    count_drop += 1
 
 def action():
-    global angle_dict
+    global angle_dict, count_listbox
     # area1からパスを取得
     image_files = droparea1.get("1.0", "end-1c")
     image_files = image_files.split()
@@ -97,10 +106,19 @@ def action():
     # 角度の辞書を作成
     angle_dict = dict(zip(image_files, angle))
 
+    # 起動して最初なら初期表示を削除
+    if(count_listbox == 0):
+        listbox.delete(0, END)
     # 補正対象をリストボックスに挿入
     for k in angle_dict.keys():
         if(angle_dict[k] > 0):
             listbox.insert(END, k)
+    count_listbox += 1
+def clear():
+    droparea1.configure(state='normal')
+    droparea1.delete('1.0', END)
+    droparea1.configure(state='disabled')
+    listbox.delete(0, END)
 
 def resize_image(image, width, height):
     aspect = image.width / image.height
@@ -173,7 +191,11 @@ model = load_model(model_location, custom_objects={'angle_error': angle_error})
 
 #Tkinter
 ctk.set_appearance_mode('light')  # Modes: system (default), light, dark
-ctk.set_default_color_theme("dark-blue")  # Themes: blue (default), dark-blue, green
+ctk.set_default_color_theme("blue")  # Themes: blue (default), dark-blue, green
+
+# 初期表示消去用変数
+count_drop = 0
+count_listbox = 0
 
 #メインウィンドウ
 root = TkinterDnD.Tk()
@@ -198,46 +220,46 @@ dialog_button.pack(side=LEFT, padx=5, )
 # 実行ボタン
 action_button = ctk.CTkButton(buttons, text='実行', command=action, width=10)
 action_button.pack(side=LEFT, padx=5)
-
-#pdf参照ラベル
-label1 = ctk.CTkLabel(frame_left, text="補正するファイル")
-label1.pack(side=TOP,  padx=10, pady=3,)
-var1 = ctk.StringVar()
-# pdfドロップvar
-var1.set('参照ボタンまたはドラッグアンドドロップ')
+# クリアボタン
+action_button = ctk.CTkButton(buttons, text='クリア', command=clear, width=10)
+action_button.pack(side=LEFT, padx=5)
 
 # pdfドロップ
-droparea1 = scrolledtext.ScrolledText(frame_left, padx=10, pady=10)
+droparea1 = scrolledtext.ScrolledText(frame_left, padx=10, pady=10,)
+droparea1.config(font=('', '15'))
 droparea1.drop_target_register(DND_FILES)
 files = droparea1.dnd_bind('<<Drop>>', droped)
 droparea1.pack(side=TOP,  padx=5, pady=10, expand=True, fill='both')
+droparea1.insert(END, '参照ボタンまたはドラッグアンドドロップ', )
+droparea1.configure(state='disabled')
 
-#補正対象ラベル
-label2 = ctk.CTkLabel(frame_left, text="補正対象")
-label2.pack(side=TOP,  padx=5, pady=5)
 var2 = ctk.StringVar()
 # 補正対象のリストボックス
-listbox = CTkListbox(frame_left, command=show_value, text_color='black', )
+listbox = CTkListbox(frame_left, command=show_value, text_color='black')
 listbox.pack(side=TOP, padx=10, pady=10, expand=True, fill='both')
+# listbox.config(bg='#232D3F')
+# listbox.config(font=('meyrio', '15'))
+listbox.insert(END, '実行を押して回転を検出')
 
 '''
 # frame_right内部
 '''
+# button
+buttons_right = ctk.CTkFrame(frame_right)
+buttons_right.pack(side=TOP, pady=(10, 0))
+
 # 選択画像表示用キャンバス
 canvas_top = ctk.CTkCanvas(frame_right, width=640,height=360, bd=0, highlightthickness=0, relief='ridge')
 canvas_top.pack(side=TOP,  padx=5, pady=10)
 # 画像を表示するためのキャンバスアイテム
 image_item_top = canvas_top.create_image(0, 0, anchor=tk.NW)
+# canvas_top.config(bg='#232D3F')
 
 # 補正画像表示用キャンバス
 canvas_bottom = ctk.CTkCanvas(frame_right, width=640,height=360, bd=0, highlightthickness=0, relief='ridge')
 canvas_bottom.pack(side=TOP,  padx=5, pady=10)
 # 画像を表示するためのキャンバスアイテム
 image_item_bottom = canvas_bottom.create_image(0, 0, anchor=tk.NW)
-
-# button
-buttons_right = ctk.CTkFrame(frame_right)
-buttons_right.pack(side=TOP, pady=(10, 0))
 
 # 保存ボタン
 save_button = ctk.CTkButton(buttons_right, text="すべて補正して保存", command=all_save, width=10)
