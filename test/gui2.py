@@ -13,73 +13,35 @@ from PIL import Image, ImageTk
 from keras.applications.imagenet_utils import preprocess_input
 from keras.models import load_model
 from utils import angle_error
+from utils2 import resize_for_predict, imread, imwrite
 import numpy as np
 
-def resize_for_predict(image, target_size):
-    height = image.shape[0]
-    width = image.shape[1]
-    
-    # 縦長
-    if height >= width:
-        dst = cv2.resize(image, None, fx=target_size/width, fy=target_size/width)
-        padding = int((dst.shape[0] - target_size)/2)
-        resized_image = dst[padding:target_size+padding, 0:target_size]
-    # 横長
-    else:
-        dst = cv2.resize(image, None, fx=target_size/height, fy=target_size/height)
-        padding = int((dst.shape[1] - target_size)/2)
-        resized_image = dst[0:target_size, padding:target_size+padding]
+def display_examples_justangle(model, input, size, preprocess_func,):
 
-    return resized_image
-
-def display_examples_justangle(model, input, num_images=5, size=None, crop_center=False,
-                     crop_largest_rect=False, preprocess_func=None, save_path=None):
-    """
-    Given a model that predicts the rotation angle of an image,
-    and a NumPy array of images or a list of image paths, display
-    the specified number of example images in three columns:
-    Original, Rotated and Corrected.
-    """
-
-    if isinstance(input, (np.ndarray)):
-        images = input
-        N, h, w = images.shape[:3]
-        if not size:
-            size = (h, w)
-        indexes = np.random.choice(N, num_images)
-        images = images[indexes, ...]
-    else:
-        images = []
-        filenames = input
-        N = len(filenames)
-        # indexes = np.random.choice(N, num_images)
-        for i in range(N):
-            image = imread(filenames[i])
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            images.append(image)
-        images = np.asarray(images)
+    images = []
+    filenames = input
+    N = len(filenames)
+    for i in range(N):
+        image = imread(filenames[i])
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        images.append(image)
+    images = np.asarray(images)
 
     x = []
-
     for i, image in enumerate(images):
-        
         height, width = image.shape[:2]
         if width < height:
             height = width
         else:
             width = height
-
-        resized_image = resize_for_predict(image, 224)
-
+        resized_image = resize_for_predict(image, size[0])
         x.append(resized_image)
 
     x = np.asarray(x, dtype='float32')
-
     if x.ndim == 3:
         x = np.expand_dims(x, axis=3)
 
-    if preprocess_func:
-        x = preprocess_func(x)
+    x = preprocess_func(x)
 
     y_pred = []
     for i, item1 in enumerate(x):
@@ -96,40 +58,6 @@ def display_examples_justangle(model, input, num_images=5, size=None, crop_cente
     y_pred[(y_pred>225) & (y_pred<=315)] = 3
 
     return y_pred
-
-def imread(path):
-    tmp_dir = os.getcwd()
-
-    # 1. 対象ファイルがあるディレクトリに移動
-    if len(path.split("/")) > 1:
-        file_dir = "/".join(path.split("/")[:-1])
-        os.chdir(file_dir)
-    # 2. 対象ファイルの名前を変更
-    tmp_name = "tmp_name"
-    os.rename(path.split("/")[-1], tmp_name)
-    # 3. 対象ファイルを読み取る
-    img = cv2.imread(tmp_name)
-    # 4. 対象ファイルの名前を戻す
-    os.rename(tmp_name, path.split("/")[-1])
-    # カレントディレクトリをもとに戻す
-    os.chdir(tmp_dir)
-    return img
-
-def imwrite(path, img):
-    tmp_dir = os.getcwd()
-    # 1. 保存するディレクトリに移動
-    if len(path.split("/")) > 1:
-        file_dir = "/".join(path.split("/")[:-1])
-        os.chdir(file_dir)
-    # 2. 対象ファイルを保存
-    tmp_name = "tmp_name.jpg"
-    cv2.imwrite(tmp_name, img)
-    # 3. 対象ファイルの名前を戻す
-    if os.path.exists(path.split("/")[-1]):  # ファイルが既にあれば削除
-        os.remove(path.split("/")[-1])
-    os.rename(tmp_name, path.split("/")[-1])
-    # カレントディレクトリをもとに戻す
-    os.chdir(tmp_dir)
 
 #UI用関数
 
@@ -180,19 +108,17 @@ def action():
     # area1からパスを取得
     image_files = droparea1.get("1.0", "end-1c")
     image_files = image_files.split()
-    image_num = len(image_files)
     prog_bar.configure(value=0.2)
     prog_bar.update()
     # 角度予測
     angle = display_examples_justangle(
     model, 
     image_files,
-    num_images=image_num,
     size=(224, 224),
-    crop_center=True,
-    crop_largest_rect=True,
     preprocess_func=preprocess_input,
     )
+
+    detect_num = 0
 
     # 角度の辞書を作成
     angle_dict = dict(zip(image_files, angle))
@@ -204,6 +130,10 @@ def action():
     for k in angle_dict.keys():
         if(angle_dict[k] > 0):
             listbox.insert(END, k)
+            detect_num+=1
+    # 補正対象が0のとき結果を挿入
+    if(detect_num==0):
+        listbox.insert(END, '検出:0件')
     count_listbox += 1
 
 def clear():
@@ -211,6 +141,8 @@ def clear():
     droparea1.delete('1.0', END)
     droparea1.configure(state='disabled')
     listbox.delete(0, END)
+    prog_bar.configure(value=0)
+
 
 def resize_image(image, width, height):
     aspect = image.width / image.height
@@ -298,7 +230,7 @@ frame_bottom = ctk.CTkFrame(root)
 frame_bottom.pack(side=BOTTOM, anchor=W, padx=10, pady=10, expand=False, fill=X)
 
 frame_buttons = ctk.CTkFrame(root)
-frame_buttons.pack(side=LEFT, anchor=W, padx=(10, 0), pady=10, expand=True, fill='both')
+frame_buttons.pack(side=LEFT, anchor=W, padx=(10, 0), pady=10, expand=False, fill=Y)
 
 frame_left = ctk.CTkFrame(root, width=100)
 frame_left.pack(side=LEFT, anchor=W, padx=(10, 0), pady=10, expand=True, fill='both')
