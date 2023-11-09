@@ -215,7 +215,8 @@ class Tk(ctk.CTk, TkinterDnD.DnDWrapper):
         super().__init__(*args, **kwargs)
         self.TkdndVersion = TkinterDnD._require(self)
 
-model_location = 'G:/VScode/RotNet/models/rotnet_street_view_resnet50_keras2_compailed.hdf5'
+
+model_location = 'RotNet/rotnet_street_view_resnet50_keras2_compailed.hdf5'
 model = load_model(model_location, custom_objects={'angle_error': angle_error})
 
 #Tkinter
