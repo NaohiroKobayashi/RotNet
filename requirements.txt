@@ -27,3 +27,6 @@ termcolor==1.1.0
 Werkzeug==0.16.0
 wget==3.2
 wrapt==1.11.2
+CTkListbox==0.10
+customtkinter==5.2.1
+tkinterdnd2==0.3.0
