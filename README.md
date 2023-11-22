@@ -8,7 +8,8 @@ RotNetは画像の正しい位置からの回転角度を予測する深層学�
 必要なパッケージは以下のコマンドでインストールできます。: `pip install -r requirements.txt`
 
 ## 利用方法
-学習済みモデルを[ここから](https://drive.google.com/file/d/1wIc2q0tSDaDAdHhMym5hpSQixCFacJ5o/view?usp=sharing)ダウンロードし、main.pyと同じ場所に配置します。
+- 学習済みモデルを[ここから](https://drive.google.com/file/d/1wIc2q0tSDaDAdHhMym5hpSQixCFacJ5o/view?usp=sharing)ダウンロードします。
+- main.pyと同じ場所に配置するか、main.py2227行目のパスを書き換えてください。
 
 ## 操作方法
 ![ダミー画像](https://github.com/NaohiroKobayashi/RotNet/assets/72367261/85e0c440-1a25-472f-adb2-431df7b7b503)
