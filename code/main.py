@@ -80,10 +80,10 @@ def filedialog_clicked(textbox):
 
 
 # フォルダ指定
-def dirdialog_clicked(var):
+def dirdialog_clicked():
     iDir = os.path.abspath(os.path.dirname(__file__))
     iDirPath = filedialog.askdirectory(initialdir = iDir)
-    var.set(iDirPath)
+    return iDirPath
 
 #dnd
 def droped(event):
@@ -196,6 +196,9 @@ def show_value(file_path):
 
 def all_save():
     global angle_dict
+    # 保存先フォルダを指定
+    filedir = dirdialog_clicked()
+
     for filepath in angle_dict:
         # 画像を読み込み
         image=Image.open(filepath)
@@ -208,7 +211,12 @@ def all_save():
         else:
             rotate_image = image.rotate(90, expand=True)
 
-        rotate_image.save(filepath)
+        # filepathのファイル名を取得
+        filename = os.path.basename(filepath)
+        # 保存先のパスを作成
+        savepath = os.path.join(filedir, filename)
+        # 保存
+        rotate_image.save(savepath)
 
 class Tk(ctk.CTk, TkinterDnD.DnDWrapper):
     def __init__(self, *args, **kwargs):
